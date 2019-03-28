@@ -1,7 +1,8 @@
 var fs = require('fs');
 var os = require('os');
-var sax = require('sax').createStream();
-var stream = fs.createWriteStream('node.csv');
+var Saxophone = require('saxophone');
+var parser = new Saxophone();
+var writer = fs.createWriteStream('node.csv');
 var columns = [
     'AOGUID', 'FORMALNAME', 'REGIONCODE', 'AUTOCODE', 'AREACODE', 'CITYCODE', 'CTARCODE', 'PLACECODE', 'PLANCODE',
     'STREETCODE', 'EXTRCODE', 'SEXTCODE', 'OFFNAME', 'POSTALCODE', 'IFNSFL', 'TERRIFNSFL', 'IFNSUL', 'TERRIFNSUL',
@@ -10,30 +11,26 @@ var columns = [
     'CADNUM', 'DIVTYPE',
 ];
 
-sax
-    .on('error', e => {
-        // unhandled errors will throw, since this is a proper node
-        // event emitter.
-        console.error('error!', e);
-        // clear the error
-        sax._parser.error = null;
-        sax._parser.resume();
-    })
-    .on('opentag', node => {
-        if (node.name === 'OBJECT') {
-            stream.write(
+var attrs = {};
+
+parser
+    .on('tagopen', node => {
+        if (node.name === 'Object') {
+            attrs = Saxophone.parseAttrs(node.attrs);
+
+            writer.write(
                 columns
-                    .map(column => '"' + (node.attributes[column] || '').replace(/"/g, '""') + '"')
+                    .map(column => '"' + (attrs[column] || '').replace(/"/g, '""') + '"')
                     .join(',')
                 + os.EOL,
             );
         }
     })
-    .on('end', () => {
-        stream.close();
+    .on('finish', () => {
+        writer.close();
     });
 
 // { highWaterMark: 64 * 1024 }
 fs
     .createReadStream('../AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML')
-    .pipe(sax);
+    .pipe(parser);
