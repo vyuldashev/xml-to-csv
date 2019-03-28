@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "sax": "^1.2.4"
+  }
+}
