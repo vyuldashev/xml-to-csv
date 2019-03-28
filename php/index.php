@@ -53,16 +53,10 @@ while ($xmlReader->read()) {
         continue;
     }
 
-    $attributesCount = $xmlReader->attributeCount;
-
     $addressObject = [];
 
-    for ($i = 0; $i < $attributesCount; $i++) {
-        $xmlReader->moveToAttributeNo($i);
-
-        if (in_array($xmlReader->name, $columns, true)) {
-            $addressObject[$xmlReader->name] = $xmlReader->value;
-        }
+    foreach ($columns as $column) {
+        $addressObject[$column] = $xmlReader->getAttribute($column);
     }
 
     fputcsv($result, $addressObject);
