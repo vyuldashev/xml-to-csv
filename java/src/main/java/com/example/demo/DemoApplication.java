@@ -72,13 +72,14 @@ public class DemoApplication {
         while (eventReader.hasNext()) {
             XMLEvent event = eventReader.nextEvent();
 
-            HashMap<String, String> addressObject = new HashMap<>();
-
             if (event.isStartElement()) {
                 StartElement startElement = event.asStartElement();
 
                 if (startElement.getName().getLocalPart().equals("Object")) {
+                    HashMap<String, String> addressObject = new HashMap<>();
+
                     Iterator<Attribute> attributes = startElement.getAttributes();
+
                     while (attributes.hasNext()) {
                         Attribute attribute = attributes.next();
 
@@ -88,12 +89,13 @@ public class DemoApplication {
                             addressObject.put(attribute.getName().toString(), attribute.getValue());
                         }
                     }
+
+                    // write to csv
+                    String s = implode(";", addressObject);
+
+                    writer.print(s);
                 }
             }
-            // write to csv
-            String s = implode(";", addressObject);
-
-            writer.print(s);
         }
     }
 
@@ -103,12 +105,14 @@ public class DemoApplication {
 
         for (Map.Entry<String, String> e : map.entrySet()) {
             if (!first) {
-                sb.append(" " + delimiter + " ");
+                sb.append(delimiter);
             }
 
             sb.append(e.getValue());
             first = false;
         }
+
+        sb.append("\n");
 
         return sb.toString();
     }
