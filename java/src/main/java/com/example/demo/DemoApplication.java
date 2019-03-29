@@ -13,14 +13,12 @@ import javax.xml.stream.events.XMLEvent;
 public class DemoApplication {
 
     public static void main(String[] args) throws FileNotFoundException, XMLStreamException, FactoryConfigurationError {
-//        SpringApplication.run(DemoApplication.class, args);
-
         XMLInputFactory inputFactory = XMLInputFactory.newInstance();
 
         inputFactory.setProperty("javax.xml.stream.isCoalescing", true);
 
         // Setup a new eventReader
-        InputStream in = new FileInputStream("AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML");
+        InputStream in = new FileInputStream("./files/AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML");
         XMLEventReader eventReader = inputFactory.createXMLEventReader(in);
 
         String[] columns = {

@@ -32,5 +32,5 @@ parser
 
 // { highWaterMark: 64 * 1024 }
 fs
-    .createReadStream('../AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML')
+    .createReadStream('./files/AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML')
     .pipe(parser);

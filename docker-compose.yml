@@ -5,7 +5,18 @@ x-volumes:
   - "./files:/app/files"
 
 services:
+  go:
+    build: go
+    volumes: *default-volume
+
+  java:
+    build: java
+    volumes: *default-volume
+
+  js:
+    build: js
+    volumes: *default-volume
+
   php:
     build: php
     volumes: *default-volume
-

@@ -51,8 +51,17 @@ var columns = []string{
 }
 
 func main() {
-	f, _ := os.Open("../AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML")
-	result, _ := os.Create("result.csv")
+	f, err := os.Open("./files/AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML")
+
+	if err != nil {
+		panic(err)
+	}
+
+	result, err := os.Create("result.csv")
+
+    if err != nil {
+		panic(err)
+	}
 
 	defer f.Close()
 	defer result.Close()
