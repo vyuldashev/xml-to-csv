@@ -1,0 +1,11 @@
+version: '3.7'
+
+x-volumes:
+  &default-volume
+  - "./files:/app/files"
+
+services:
+  php:
+    build: php
+    volumes: *default-volume
+
