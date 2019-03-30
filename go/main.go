@@ -2,109 +2,157 @@ package main
 
 import (
 	"bufio"
-	"encoding/csv"
-	"encoding/xml"
+	"bytes"
 	"fmt"
 	"os"
+	"strings"
 )
 
 var columns = []string{
-	"AOGUID",
-	"FORMALNAME",
-	"REGIONCODE",
-	"AUTOCODE",
-	"AREACODE",
-	"CITYCODE",
-	"CTARCODE",
-	"PLACECODE",
-	"PLANCODE",
-	"STREETCODE",
-	"EXTRCODE",
-	"SEXTCODE",
-	"OFFNAME",
-	"POSTALCODE",
-	"IFNSFL",
-	"TERRIFNSFL",
-	"IFNSUL",
-	"TERRIFNSUL",
-	"OKATO",
-	"OKTMO",
-	"UPDATEDATE",
-	"SHORTNAME",
-	"AOLEVEL",
-	"PARENTGUID",
-	"AOID",
-	"PREVID",
-	"NEXTID",
-	"CODE",
-	"PLAINCODE",
-	"ACTSTATUS",
-	"LIVESTATUS",
-	"CENTSTATUS",
-	"OPERSTATUS",
-	"CURRSTATUS",
-	"STARTDATE",
-	"ENDDATE",
-	"NORMDOC",
-	"CADNUM",
-	"DIVTYPE",
+	"AOGUID=\"",
+	"FORMALNAME=\"",
+	"REGIONCODE=\"",
+	"AUTOCODE=\"",
+	"AREACODE=\"",
+	"CITYCODE=\"",
+	"CTARCODE=\"",
+	"PLACECODE=\"",
+	"PLANCODE=\"",
+	"STREETCODE=\"",
+	"EXTRCODE=\"",
+	"SEXTCODE=\"",
+	"OFFNAME=\"",
+	"POSTALCODE=\"",
+	"IFNSFL=\"",
+	"TERRIFNSFL=\"",
+	"IFNSUL=\"",
+	"TERRIFNSUL=\"",
+	"OKATO=\"",
+	"OKTMO=\"",
+	"UPDATEDATE=\"",
+	"SHORTNAME=\"",
+	"AOLEVEL=\"",
+	"PARENTGUID=\"",
+	"AOID=\"",
+	"PREVID=\"",
+	"NEXTID=\"",
+	"CODE=\"",
+	"PLAINCODE=\"",
+	"ACTSTATUS=\"",
+	"LIVESTATUS=\"",
+	"CENTSTATUS=\"",
+	"OPERSTATUS=\"",
+	"CURRSTATUS=\"",
+	"STARTDATE=\"",
+	"ENDDATE=\"",
+	"NORMDOC=\"",
+	"CADNUM=\"",
+	"DIVTYPE=\"",
 }
 
-func main() {
-	f, err := os.Open("./files/AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML")
+type StringParser struct{}
 
-	if err != nil {
-		panic(err)
-	}
+func (p *StringParser) Parse(in <-chan string, out chan<- string) {
+	for value := range in {
+		var line strings.Builder
 
-	result, err := os.Create("result.csv")
+		for _, attribute := range columns {
+			start := strings.Index(value, attribute)
 
-    if err != nil {
-		panic(err)
-	}
-
-	defer f.Close()
-	defer result.Close()
-
-	writer := csv.NewWriter(result)
-	defer writer.Flush()
-
-	r := bufio.NewReader(f)
-	d := xml.NewDecoder(r)
-
-	for {
-		token, err := d.Token()
-
-		if token == nil || err != nil {
-			break
-		}
-
-		switch se := token.(type) {
-		case xml.StartElement:
-			if se.Name.Local != "Object" {
+			if start == -1 {
+				_ = line.WriteByte(';')
 				continue
 			}
 
-			data := make(map[string]string, len(se.Attr))
-			for _, a := range se.Attr {
-				data[a.Name.Local] = a.Value
-			}
+			start += len(attribute)
 
-			item := make([]string, len(columns))
+			end := strings.Index(value[start:], "\"") + start
 
-			for index, attr := range columns {
-				if v, ok := data[attr]; ok {
-					item[index] = v
-				} else {
-					item[index] = ""
-				}
-			}
-
-			writer.Write(item)
+			_, _ = line.WriteString(value[start:end])
+			_ = line.WriteByte(';')
 		}
+
+		_ = line.WriteByte('\n')
+
+		out <- line.String()
 	}
 
-	fmt.Println("Waiting for all writes...")
+	close(out)
+}
 
-	fmt.Println("Done")
+func main() {
+	parser := StringParser{}
+
+	scanned, parsed, done := make(chan string), make(chan string), make(chan int)
+
+	go parser.Parse(scanned, parsed)
+
+	go func() {
+		f, err := os.Open("./files/AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML")
+
+		if err != nil {
+			panic(err)
+		}
+
+		defer f.Close()
+
+		startOfXml := []byte("<Object")
+		endOfXml := []byte("/>")
+
+		scanner := bufio.NewScanner(f)
+		split := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+			start := bytes.Index(data, startOfXml)
+
+			if start == -1 {
+				return 0, nil, nil
+			}
+
+			end := bytes.Index(data[start:], endOfXml)
+
+			if end == -1 {
+				return 0, nil, nil
+			}
+
+			width := start + end + len(endOfXml)
+
+			return width, data[start:width], nil
+		}
+		scanner.Split(split)
+
+		for scanner.Scan() {
+			scanned <- scanner.Text()
+		}
+
+		close(scanned)
+	}()
+
+	go func() {
+		result, err := os.Create("result.csv")
+
+		if err != nil {
+			panic(err)
+		}
+
+		defer result.Close()
+
+		w := bufio.NewWriter(result)
+
+		count := 0
+		for v := range parsed {
+			count++
+			_, _ = w.WriteString(v)
+
+			if count > 0 && count%10000 == 0 {
+				_ = w.Flush()
+			}
+		}
+
+		_ = w.Flush()
+
+		close(done)
+	}()
+
+	_, ok := <-done
+
+	fmt.Println("isOpen", ok)
 }
