@@ -52,7 +52,7 @@ var columns = []string{
 
 type StringParser struct{}
 
-func (p *StringParser) Parse(in <-chan string, out chan<- string) {
+func (p *StringParser) Parse(id int, in <-chan string, out chan<- string, done chan<- int) {
 	for value := range in {
 		var line strings.Builder
 
@@ -77,15 +77,18 @@ func (p *StringParser) Parse(in <-chan string, out chan<- string) {
 		out <- line.String()
 	}
 
-	close(out)
+	done <- id
 }
 
 func main() {
 	parser := StringParser{}
 
+	workers := 3
 	scanned, parsed, done := make(chan string), make(chan string), make(chan int)
 
-	go parser.Parse(scanned, parsed)
+	for id := 0; id < workers; id++ {
+		go parser.Parse(id, scanned, parsed, done)
+	}
 
 	go func() {
 		f, err := os.Open("./files/AS_ADDROBJ_20190324_a1a706ea-4ac7-43e7-b65b-68de81a57ddb.XML")
@@ -142,7 +145,7 @@ func main() {
 			count++
 			_, _ = w.WriteString(v)
 
-			if count > 0 && count%10000 == 0 {
+			if count > 0 && count%20000 == 0 {
 				_ = w.Flush()
 			}
 		}
@@ -152,7 +155,14 @@ func main() {
 		close(done)
 	}()
 
-	_, ok := <-done
+	waits := workers
 
-	fmt.Println("isOpen", ok)
+	for range done {
+		waits--
+		if waits == 0 {
+			close(parsed)
+		}
+	}
+
+	fmt.Println("Done")
 }
