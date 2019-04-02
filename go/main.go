@@ -138,16 +138,10 @@ func main() {
 
 		defer result.Close()
 
-		w := bufio.NewWriter(result)
+		w := bufio.NewWriterSize(result, 4096*5)
 
-		count := 0
 		for v := range parsed {
-			count++
 			_, _ = w.WriteString(v)
-
-			if count > 0 && count%20000 == 0 {
-				_ = w.Flush()
-			}
 		}
 
 		_ = w.Flush()
